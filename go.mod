@@ -1,4 +1,4 @@
-module arpmonitor
+module github.com/vgropp/arpmonitor
 
 go 1.20
 

@@ -1,0 +1,5 @@
+ARP_IFACE=eth0
+ARP_API_PORT=8253
+ARP_API_BIND=127.0.0.1
+ARP_DAYS=7
+ARP_DB_PATH=/var/lib/arpmonitor/arpmonitor.db

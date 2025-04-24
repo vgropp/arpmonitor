@@ -1,0 +1,24 @@
+[Unit]
+Description=ARP Monitor Daemon
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/arpmonitor
+ExecStart=/usr/local/bin/arpmonitor \
+    --interface=${ARP_IFACE} \
+    --port=${ARP_API_PORT} \
+    --bind=${ARP_API_BIND} \
+    --days=${ARP_DAYS} \
+    --db=${ARP_DB_PATH}
+Restart=on-failure
+RestartSec=5s
+User=arpmonitor
+Group=arpmonitor
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -13,8 +13,8 @@ import (
 
 type ArpEntry struct {
 	MAC      string    `json:"mac"`
-	IPv4     string    `json:"ipv4,omitempty"`
-	IPv6     string    `json:"ipv6,omitempty"`
+	IPv4     []string  `json:"ipv4,omitempty"`
+	IPv6     []string  `json:"ipv6,omitempty"`
 	Hostname string    `json:"hostname,omitempty"`
 	LastSeen time.Time `json:"last_seen"`
 }
@@ -29,7 +29,7 @@ func InitDB(path string) (*sql.DB, error) {
         CREATE TABLE IF NOT EXISTS arp_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ip TEXT NOT NULL,
-            ip_type TEXT NOT NULL,   -- 'ipv4' oder 'ipv6'
+            ip_type TEXT NOT NULL,   -- 'ipv4' or 'ipv6'
             mac TEXT NOT NULL,
             seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
@@ -56,7 +56,7 @@ func InsertARPEvent(db *sql.DB, ip, mac string) {
 func GetRecentEntries(db *sql.DB, days int) ([]ArpEntry, error) {
 	rows, err := db.Query(`
         SELECT mac, ip, ip_type, seen_at FROM arp_events
-        WHERE seen_at >= datetime('now', ?) order by mac
+        WHERE seen_at >= datetime('now', ?) order by mac,seen_at desc
         `, fmt.Sprintf("-%d days", days))
 	if err != nil {
 		return nil, err
@@ -82,9 +82,9 @@ func GetRecentEntries(db *sql.DB, days int) ([]ArpEntry, error) {
 
 		switch ipType {
 		case "ipv4":
-			entry.IPv4 = ip
+			entry.IPv4 = addIfNotExists(entry.IPv4, ip)
 		case "ipv6":
-			entry.IPv6 = ip
+			entry.IPv6 = addIfNotExists(entry.IPv6, ip)
 		}
 
 		if seenAt.After(entry.LastSeen) {
@@ -92,7 +92,6 @@ func GetRecentEntries(db *sql.DB, days int) ([]ArpEntry, error) {
 		}
 	}
 
-	// In Slice umwandeln
 	var result []ArpEntry
 	for _, entry := range macMap {
 		result = append(result, *entry)
@@ -102,4 +101,13 @@ func GetRecentEntries(db *sql.DB, days int) ([]ArpEntry, error) {
 	})
 
 	return result, nil
+}
+
+func addIfNotExists[T comparable](slice []T, item T) []T {
+	for _, v := range slice {
+		if v == item {
+			return slice // Already exists, return unchanged
+		}
+	}
+	return append(slice, item)
 }

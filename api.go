@@ -7,9 +7,12 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
-func StartAPI(port int, db *sql.DB) {
+const IPV4_PREFERED = "192.168."
+
+func StartAPI(port int, db *sql.DB, resolveIpv6 bool) {
 	http.HandleFunc("/api/current", func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
 		days := 7
@@ -26,7 +29,7 @@ func StartAPI(port int, db *sql.DB) {
 		}
 
 		for _, entry := range entries {
-			lookupEntry(&entry)
+			lookupEntry(&entry, resolveIpv6)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -48,15 +51,14 @@ func StartAPI(port int, db *sql.DB) {
 			return
 		}
 
-		// Ausgabe im OpenWRT Ethers Format
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("# MAC-Adresse          Hostname             IPv4-Adresse      IPv6-Adresse\n"))
 
 		for _, entry := range entries {
 
-			lookupEntry(&entry)
+			lookupEntry(&entry, resolveIpv6)
 
-			fmt.Fprintf(w, "%-20s %-20s %-15s %-15s\n", entry.MAC, entry.Hostname, entry.IPv4, entry.IPv6)
+			fmt.Fprintf(w, "%-20s %-20s %-15s %-15s\n", entry.MAC, entry.Hostname, firstMatchOrEmpty(entry.IPv4, IPV4_PREFERED), firstMatchOrEmpty(entry.IPv6, ""))
 		}
 	})
 
@@ -65,12 +67,25 @@ func StartAPI(port int, db *sql.DB) {
 	http.ListenAndServe(addr, nil)
 }
 
-func lookupEntry(entry *ArpEntry) {
-	names, err := net.LookupAddr(entry.IPv4)
+/** first or prefered network */
+func firstMatchOrEmpty(slice []string, pattern string) string {
+	for _, s := range slice {
+		if strings.Contains(s, pattern) {
+			return s
+		}
+	}
+	if len(slice) > 0 {
+		return slice[0]
+	}
+	return ""
+}
+
+func lookupEntry(entry *ArpEntry, resolveIpv6 bool) {
+	names, err := net.LookupAddr(firstMatchOrEmpty(entry.IPv4, IPV4_PREFERED))
 	if err == nil && len(names) > 0 {
 		entry.Hostname = names[0]
-	} else {
-		names, err = net.LookupAddr(entry.IPv4)
+	} else if resolveIpv6 {
+		names, err = net.LookupAddr(firstMatchOrEmpty(entry.IPv6, ""))
 		if err == nil && len(names) > 0 {
 			entry.Hostname = names[0]
 		}
