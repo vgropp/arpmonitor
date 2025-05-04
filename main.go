@@ -6,6 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/vgropp/arpmonitor/api"
+	"github.com/vgropp/arpmonitor/internal/arp"
+	"github.com/vgropp/arpmonitor/internal/db"
 )
 
 func main() {
@@ -15,14 +19,14 @@ func main() {
 	port := flag.Int("port", 8567, "HTTP API Port")
 	flag.Parse()
 
-	db, err := InitDB(*dbfile)
+	database, err := db.InitDB(*dbfile)
 	if err != nil {
 		log.Fatalf("DB Fehler: %v", err)
 	}
-	defer db.Close()
+	defer database.Close()
 
-	go StartSniffer(*iface, db)
-	go StartAPI(*port, db, *resolveIpv6)
+	go arp.StartSniffer(*iface, database)
+	go api.StartAPI(*port, database, *resolveIpv6)
 
 	// Warten auf Signal zum Beenden
 	sig := make(chan os.Signal, 1)

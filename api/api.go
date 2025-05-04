@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"database/sql"
@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/vgropp/arpmonitor/internal/db"
 )
 
 const IPV4_PREFERED = "192.168."
 
-func StartAPI(port int, db *sql.DB, resolveIpv6 bool) {
+func StartAPI(port int, database *sql.DB, resolveIpv6 bool) {
 	http.HandleFunc("/api/current", func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
 		days := 7
@@ -22,7 +24,7 @@ func StartAPI(port int, db *sql.DB, resolveIpv6 bool) {
 			}
 		}
 
-		entries, err := GetRecentEntries(db, days)
+		entries, err := db.GetRecentEntries(database, days)
 		if err != nil {
 			http.Error(w, "error on reading entries", http.StatusInternalServerError)
 			return
@@ -45,7 +47,7 @@ func StartAPI(port int, db *sql.DB, resolveIpv6 bool) {
 			}
 		}
 
-		entries, err := GetRecentEntries(db, days)
+		entries, err := db.GetRecentEntries(database, days)
 		if err != nil {
 			http.Error(w, "error on reading entries", http.StatusInternalServerError)
 			return
@@ -80,7 +82,7 @@ func firstMatchOrEmpty(slice []string, pattern string) string {
 	return ""
 }
 
-func lookupEntry(entry *ArpEntry, resolveIpv6 bool) {
+func lookupEntry(entry *db.ArpEntry, resolveIpv6 bool) {
 	names, err := net.LookupAddr(firstMatchOrEmpty(entry.IPv4, IPV4_PREFERED))
 	if err == nil && len(names) > 0 {
 		entry.Hostname = names[0]
