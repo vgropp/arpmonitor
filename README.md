@@ -23,6 +23,8 @@ cd arpmonitor
 go build -o arpmonitor
 ```
 
+libpcap-dev is needed `sudo apt-get update && sudo apt-get install -y libpcap-dev`
+
 ---
 
 ## Usage
