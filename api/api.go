@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -33,7 +34,10 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(entries)
+
+		if err := json.NewEncoder(w).Encode(entries); err != nil {
+			http.Error(w, "internal server error, failed to encode JSON response", http.StatusInternalServerError)
+		}
 	})
 
 	http.HandleFunc("/api/ethers", func(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +56,10 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string
 		}
 
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("# MAC-Address          Hostname             IPv4-Address      IPv6-Address\n"))
+		if _, err := w.Write([]byte("# MAC-Address          Hostname             IPv4-Address      IPv6-Address\n")); err != nil {
+			http.Error(w, "error writing header", http.StatusInternalServerError)
+			return
+		}
 
 		for _, entry := range entries {
 
@@ -62,15 +69,19 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string
 			if filterZeroIps && ipv4 == "0.0.0.0" && len(entry.IPv6) == 0 {
 				continue
 			}
-			fmt.Fprintf(w, "%-20s %-20s %-15s %-15s\n", entry.MAC, entry.Hostname,
-				ipv4,
-				firstMatchOrEmpty(entry.IPv6, ""))
+			if _, err := fmt.Fprintf(w, "%-20s %-20s %-15s %-15s\n", entry.MAC, entry.Hostname,
+				ipv4, firstMatchOrEmpty(entry.IPv6, "")); err != nil {
+				http.Error(w, "error writing header", http.StatusInternalServerError)
+				return
+			}
 		}
 	})
 
 	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("API: http://localhost%s/api/current\n", addr)
-	http.ListenAndServe(addr, nil)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }
 
 /** first or prefered network */

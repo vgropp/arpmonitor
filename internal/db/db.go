@@ -61,7 +61,11 @@ func GetRecentEntries(db *sql.DB, days int) ([]ArpEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("error closing rows: %v", err)
+		}
+	}()
 
 	macMap := make(map[string]*ArpEntry)
 

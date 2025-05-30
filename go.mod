@@ -1,6 +1,6 @@
 module github.com/vgropp/arpmonitor
 
-go 1.20
+go 1.22
 
 require (
 	github.com/google/gopacket v1.1.19
