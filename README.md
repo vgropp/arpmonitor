@@ -111,3 +111,7 @@ Then access the API:
 curl http://localhost:8567/api/ethers?days=7
 curl http://localhost:8567/api/current?days=3
 ```
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
