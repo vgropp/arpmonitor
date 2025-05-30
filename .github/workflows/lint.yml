@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - name: Install libpcap (for gopacket)
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
