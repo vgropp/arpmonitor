@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -27,7 +28,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB Fehler: %v", err)
 	}
-	defer database.Close()
+	defer func() {
+		closeErr := database.Close()
+		if closeErr != nil && err == nil {
+			err = fmt.Errorf("database.Close: %w", closeErr)
+		}
+	}()
 
 	go arp.StartSniffer(*iface, database)
 	go api.StartAPI(*port, database, *resolveIpv6, *preferIpv4Net, *filterZeroIps)
