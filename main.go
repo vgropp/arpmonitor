@@ -12,10 +12,14 @@ import (
 	"github.com/vgropp/arpmonitor/internal/db"
 )
 
+const IPV4_PREFERED = "192.168."
+
 func main() {
-	iface := flag.String("iface", "eth0", "Netzwerkschnittstelle für ARP/NDP Monitoring")
+	iface := flag.String("iface", "eth0", "interface for ARP/NDP Monitoring")
 	dbfile := flag.String("db", "/var/lib/arpmonitor/arpmonitor.db", "path to database file")
-	resolveIpv6 := flag.Bool("resolve-ipv6", false, "Netzwerkschnittstelle für ARP/NDP Monitoring")
+	resolveIpv6 := flag.Bool("resolve-ipv6", false, "resolve IPv6 addresses")
+	filterZeroIps := flag.Bool("filter-zero-ips", true, "filter out 0.0.0.0 IP addresses (default: true)")
+	preferIpv4Net := flag.String("prefer-ipv4-net", IPV4_PREFERED, "network prefix for IPv4-Adressen, which will be prefered if multiple addresses are available (default: 192.168.)")
 	port := flag.Int("port", 8567, "HTTP API Port")
 	flag.Parse()
 
@@ -26,7 +30,7 @@ func main() {
 	defer database.Close()
 
 	go arp.StartSniffer(*iface, database)
-	go api.StartAPI(*port, database, *resolveIpv6)
+	go api.StartAPI(*port, database, *resolveIpv6, *preferIpv4Net, *filterZeroIps)
 
 	// Warten auf Signal zum Beenden
 	sig := make(chan os.Signal, 1)

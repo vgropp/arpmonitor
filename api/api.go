@@ -12,9 +12,7 @@ import (
 	"github.com/vgropp/arpmonitor/internal/db"
 )
 
-const IPV4_PREFERED = "192.168."
-
-func StartAPI(port int, database *sql.DB, resolveIpv6 bool) {
+func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
 	http.HandleFunc("/api/current", func(w http.ResponseWriter, r *http.Request) {
 		daysStr := r.URL.Query().Get("days")
 		days := 7
@@ -31,7 +29,7 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool) {
 		}
 
 		for _, entry := range entries {
-			lookupEntry(&entry, resolveIpv6)
+			lookupEntry(&entry, resolveIpv6, preferIpv4Net)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -58,9 +56,15 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool) {
 
 		for _, entry := range entries {
 
-			lookupEntry(&entry, resolveIpv6)
+			lookupEntry(&entry, resolveIpv6, preferIpv4Net)
 
-			fmt.Fprintf(w, "%-20s %-20s %-15s %-15s\n", entry.MAC, entry.Hostname, firstMatchOrEmpty(entry.IPv4, IPV4_PREFERED), firstMatchOrEmpty(entry.IPv6, ""))
+			ipv4 := firstMatchOrEmpty(entry.IPv4, preferIpv4Net)
+			if filterZeroIps && ipv4 == "0.0.0.0" && len(entry.IPv6) == 0 {
+				continue
+			}
+			fmt.Fprintf(w, "%-20s %-20s %-15s %-15s\n", entry.MAC, entry.Hostname,
+				ipv4,
+				firstMatchOrEmpty(entry.IPv6, ""))
 		}
 	})
 
@@ -72,7 +76,7 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool) {
 /** first or prefered network */
 func firstMatchOrEmpty(slice []string, pattern string) string {
 	for _, s := range slice {
-		if strings.Contains(s, pattern) {
+		if strings.HasPrefix(s, pattern) {
 			return s
 		}
 	}
@@ -82,8 +86,8 @@ func firstMatchOrEmpty(slice []string, pattern string) string {
 	return ""
 }
 
-func lookupEntry(entry *db.ArpEntry, resolveIpv6 bool) {
-	names, err := net.LookupAddr(firstMatchOrEmpty(entry.IPv4, IPV4_PREFERED))
+func lookupEntry(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string) {
+	names, err := net.LookupAddr(firstMatchOrEmpty(entry.IPv4, preferIpv4Net))
 	if err == nil && len(names) > 0 {
 		entry.Hostname = names[0]
 	} else if resolveIpv6 {
