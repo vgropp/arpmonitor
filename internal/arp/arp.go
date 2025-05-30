@@ -15,12 +15,12 @@ import (
 func StartSniffer(iface string, database *sql.DB) {
 	handle, err := pcap.OpenLive(iface, 65536, true, pcap.BlockForever)
 	if err != nil {
-		log.Fatalf("Fehler beim Öffnen von %s: %v", iface, err)
+		log.Fatalf("error while opening %s: %v", iface, err)
 	}
 	defer handle.Close()
 
 	if err := handle.SetBPFFilter("arp or icmp6"); err != nil {
-		log.Fatalf("BPF-Filter Fehler: %v", err)
+		log.Fatalf("BPF-Filter error: %v", err)
 	}
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())

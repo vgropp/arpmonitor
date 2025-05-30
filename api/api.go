@@ -52,7 +52,7 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string
 		}
 
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("# MAC-Adresse          Hostname             IPv4-Adresse      IPv6-Adresse\n"))
+		w.Write([]byte("# MAC-Address          Hostname             IPv4-Address      IPv6-Address\n"))
 
 		for _, entry := range entries {
 
@@ -69,7 +69,7 @@ func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string
 	})
 
 	addr := fmt.Sprintf(":%d", port)
-	fmt.Printf("API verfügbar unter http://localhost%s/api/current\n", addr)
+	fmt.Printf("API: http://localhost%s/api/current\n", addr)
 	http.ListenAndServe(addr, nil)
 }
 

@@ -32,7 +32,6 @@ func main() {
 	go arp.StartSniffer(*iface, database)
 	go api.StartAPI(*port, database, *resolveIpv6, *preferIpv4Net, *filterZeroIps)
 
-	// Warten auf Signal zum Beenden
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
