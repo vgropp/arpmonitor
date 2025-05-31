@@ -4,7 +4,6 @@
     "config:recommended"
   ],
   "platform": "github",
-  "useGitHubChecks": true,
   "automerge": true,
   "automergeType": "branch",
   "automergeStrategy": "rebase",
