@@ -1,6 +1,7 @@
 package db
 
 import (
+	"log"
 	"testing"
 )
 
@@ -9,8 +10,11 @@ func TestInitDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitDB failed: %v", err)
 	}
-	defer db.Close()
-
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("failed to close database: %v", err)
+		}
+	}()
 	// Check if table exists by inserting a row
 	_, err = db.Exec(`INSERT INTO arp_events (ip, ip_type, mac) VALUES (?, ?, ?)`, "1.2.3.4", "ipv4", "00:11:22:33:44:55")
 	if err != nil {
@@ -23,8 +27,11 @@ func TestInsertAndGetRecentEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitDB failed: %v", err)
 	}
-	defer db.Close()
-
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("failed to close database: %v", err)
+		}
+	}()
 	// Insert IPv4 and IPv6 events
 	InsertARPEvent(db, "192.168.1.10", "00:11:22:33:44:55")
 	InsertARPEvent(db, "fe80::1", "00:11:22:33:44:55")

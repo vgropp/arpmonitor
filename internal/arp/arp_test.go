@@ -2,6 +2,7 @@ package arp
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -43,7 +44,9 @@ func TestProcessPacket_ARP(t *testing.T) {
 	}
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{}
-	gopacket.SerializeLayers(buf, opts, eth, arpLayer)
+	if err := gopacket.SerializeLayers(buf, opts, eth, arpLayer); err != nil {
+		panic(fmt.Errorf("SerializeLayers failed: %w", err))
+	}
 	packet := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeEthernet, gopacket.Default)
 
 	ProcessPacket(packet, nil)
@@ -90,12 +93,11 @@ func TestProcessPacket_ICMPv6_NA(t *testing.T) {
 	opts := gopacket.SerializeOptions{
 		FixLengths: true,
 	}
-	gopacket.SerializeLayers(buf, opts, eth, ip6, icmp6, gopacket.Payload(naPayload))
-	packet := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeEthernet, gopacket.Default)
 
-	for _, l := range packet.Layers() {
-		t.Logf("Layer: %v", l.LayerType())
+	if err := gopacket.SerializeLayers(buf, opts, eth, ip6, icmp6, gopacket.Payload(naPayload)); err != nil {
+		panic(fmt.Errorf("SerializeLayers failed: %w", err))
 	}
+	packet := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeEthernet, gopacket.Default)
 
 	ProcessPacket(packet, nil)
 

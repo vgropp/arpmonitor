@@ -15,6 +15,7 @@ import (
 
 var getRecentEntries = db.GetRecentEntries
 var lookupEntry = lookupEntryFunc
+var netLookupAddr = net.LookupAddr
 
 func RegisterHandlers(mux *http.ServeMux, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
 	mux.HandleFunc("/api/current", func(w http.ResponseWriter, r *http.Request) {
@@ -113,11 +114,11 @@ func firstMatchOrEmpty(slice []string, pattern string) string {
 }
 
 func lookupEntryFunc(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string) {
-	names, err := net.LookupAddr(firstMatchOrEmpty(entry.IPv4, preferIpv4Net))
+	names, err := netLookupAddr(firstMatchOrEmpty(entry.IPv4, preferIpv4Net))
 	if err == nil && len(names) > 0 {
 		entry.Hostname = names[0]
 	} else if resolveIpv6 {
-		names, err = net.LookupAddr(firstMatchOrEmpty(entry.IPv6, ""))
+		names, err = netLookupAddr(firstMatchOrEmpty(entry.IPv6, ""))
 		if err == nil && len(names) > 0 {
 			entry.Hostname = names[0]
 		}

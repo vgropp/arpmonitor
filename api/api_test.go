@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"io"
-	"net"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -99,13 +99,54 @@ func TestLookupEntry(t *testing.T) {
 	}
 }
 
+var mockLookupAddr func(addr string) ([]string, error)
+
+func TestLookupEntryFunc_IPv4(t *testing.T) {
+	entry := db.ArpEntry{
+		IPv4: []string{"1.2.3.4"},
+	}
+	mockLookupAddr = func(addr string) ([]string, error) {
+		if addr == "1.2.3.4" {
+			return []string{"host4.local."}, nil
+		}
+		return nil, nil
+	}
+	lookupEntryFunc(&entry, false, "")
+	if entry.Hostname != "host4.local." {
+		t.Errorf("expected host4.local., got %q", entry.Hostname)
+	}
+}
+
+func TestLookupEntryFunc_IPv6(t *testing.T) {
+	entry := db.ArpEntry{
+		IPv4: []string{"0.0.0.0"},
+		IPv6: []string{"fe80::1"},
+	}
+	callCount := 0
+	mockLookupAddr = func(addr string) ([]string, error) {
+		callCount++
+		if addr == "0.0.0.0" {
+			return nil, assertErr{}
+		}
+		if addr == "fe80::1" {
+			return []string{"host6.local."}, nil
+		}
+		return nil, nil
+	}
+	lookupEntryFunc(&entry, true, "")
+	if entry.Hostname != "host6.local." {
+		t.Errorf("expected host6.local., got %q", entry.Hostname)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 lookups, got %d", callCount)
+	}
+}
+
 // --- helpers for mocking net.LookupAddr ---
 
 type assertErr struct{}
 
 func (assertErr) Error() string { return "mock error" }
-
-var netLookupAddr = net.LookupAddr
 
 // Patch lookupEntry to use netLookupAddr for testability
 func init() {
@@ -119,6 +160,9 @@ func init() {
 				entry.Hostname = names[0]
 			}
 		}
+	}
+	netLookupAddr = func(addr string) ([]string, error) {
+		return mockLookupAddr(addr)
 	}
 }
 
@@ -169,7 +213,11 @@ func TestAPI_CurrentEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/current failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET /api/current status = %d, want 200", resp.StatusCode)
 	}
@@ -197,7 +245,11 @@ func TestAPI_EthersEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/ethers failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET /api/ethers status = %d, want 200", resp.StatusCode)
 	}
