@@ -7,14 +7,18 @@
   "automerge": true,
   "automergeType": "branch",
   "automergeStrategy": "rebase",
-  "requiredStatusChecks": ["Go Build and Test", "Go Lint"],
   "packageRules": [
     {
-      "matchUpdateTypes": ["patch", "minor"],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
       "automerge": true
     },
     {
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false
     }
   ]
