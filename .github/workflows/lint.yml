@@ -2,15 +2,8 @@ name: Go Lint
 
 on:
   push:
-    paths:
-      - '**.go'
     branches: [ "main" ]
   pull_request:
-    paths:
-      - '**.go'
-      - '**.mod'
-      - '**.sum'
-      - '.github/workflows/lint.yml'
     branches: [ "main" ]
 
 permissions:
