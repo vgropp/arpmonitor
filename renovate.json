@@ -2,5 +2,21 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "platform": "github",
+  "useGitHubChecks": true,
+  "automerge": true,
+  "automergeType": "branch",
+  "automergeStrategy": "rebase",
+  "requiredStatusChecks": ["Go Build and Test", "Go Lint"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
   ]
 }
