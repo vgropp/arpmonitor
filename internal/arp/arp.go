@@ -12,6 +12,8 @@ import (
 	"github.com/vgropp/arpmonitor/internal/db"
 )
 
+var insertARPEvent = db.InsertARPEvent
+
 func StartSniffer(iface string, database *sql.DB) {
 	handle, err := pcap.OpenLive(iface, 65536, true, pcap.BlockForever)
 	if err != nil {
@@ -25,24 +27,31 @@ func StartSniffer(iface string, database *sql.DB) {
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
-		if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
-			arp := arpLayer.(*layers.ARP)
-			ip := net.IP(arp.SourceProtAddress).String()
-			mac := net.HardwareAddr(arp.SourceHwAddress).String()
-			db.InsertARPEvent(database, ip, mac)
-		}
+		ProcessPacket(packet, database)
+	}
+}
 
-		if icmpLayer := packet.Layer(layers.LayerTypeICMPv6); icmpLayer != nil {
-			icmp := icmpLayer.(*layers.ICMPv6)
-			if icmp.TypeCode.Type() == 136 { // Neighbor Advertisement
-				if ndpLayer := packet.Layer(layers.LayerTypeIPv6); ndpLayer != nil {
-					ip6 := ndpLayer.(*layers.IPv6).SrcIP.String()
-					eth := packet.Layer(layers.LayerTypeEthernet)
-					if eth != nil {
-						mac := eth.(*layers.Ethernet).SrcMAC.String()
-						db.InsertARPEvent(database, ip6, mac)
-					}
-				}
+func ProcessPacket(packet gopacket.Packet, database *sql.DB) {
+	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+	var eth *layers.Ethernet
+	if ethLayer != nil {
+		eth = ethLayer.(*layers.Ethernet)
+	}
+
+	if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
+		arp := arpLayer.(*layers.ARP)
+		ip := net.IP(arp.SourceProtAddress).String()
+		mac := net.HardwareAddr(arp.SourceHwAddress).String()
+		insertARPEvent(database, ip, mac)
+	}
+
+	if icmpLayer := packet.Layer(layers.LayerTypeICMPv6); icmpLayer != nil {
+		icmp := icmpLayer.(*layers.ICMPv6)
+		if icmp.TypeCode.Type() == 136 { // Neighbor Advertisement
+			if ndpLayer := packet.Layer(layers.LayerTypeIPv6); ndpLayer != nil && eth != nil {
+				ip6 := ndpLayer.(*layers.IPv6).SrcIP.String()
+				mac := eth.SrcMAC.String()
+				insertARPEvent(database, ip6, mac)
 			}
 		}
 	}
