@@ -92,10 +92,9 @@ func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolv
 func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
 	mux := http.NewServeMux()
 	RegisterHandlers(mux, database, resolveIpv6, preferIpv4Net, filterZeroIps)
-
 	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("API: http://localhost%s/api/current\n", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
 }
