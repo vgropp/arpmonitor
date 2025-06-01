@@ -17,6 +17,10 @@ var getRecentEntries = db.GetRecentEntries
 var lookupEntry = lookupEntryFunc
 var netLookupAddr = net.LookupAddr
 
+var ListenAndServe = func(addr string, handler http.Handler) error {
+	return http.ListenAndServe(addr, handler)
+}
+
 func RegisterHandlers(mux *http.ServeMux, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
 	mux.HandleFunc("/api/current", func(w http.ResponseWriter, r *http.Request) {
 		handleJson(r, database, w, resolveIpv6, preferIpv4Net)
@@ -89,14 +93,15 @@ func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolv
 	}
 }
 
-func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
+func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) *http.ServeMux {
 	mux := http.NewServeMux()
 	RegisterHandlers(mux, database, resolveIpv6, preferIpv4Net, filterZeroIps)
 	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("API: http://localhost%s/api/current\n", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
+	return mux
 }
 
 /** first or prefered network */

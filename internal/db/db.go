@@ -25,7 +25,12 @@ func InitDB(path string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	_, err = db.Exec(`
+	err = CreateTable(db)
+	return db, err
+}
+
+func CreateTable(db *sql.DB) error {
+	_, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS arp_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ip TEXT NOT NULL,
@@ -34,7 +39,7 @@ func InitDB(path string) (*sql.DB, error) {
             seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     `)
-	return db, err
+	return err
 }
 
 func InsertARPEvent(db *sql.DB, ip, mac string) {

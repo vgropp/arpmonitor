@@ -262,3 +262,53 @@ func TestAPI_EthersEndpoint(t *testing.T) {
 		t.Errorf("output missing expected MAC addresses: %q", lines)
 	}
 }
+
+func TestStartAPI(t *testing.T) {
+	called := false
+	ListenAndServe = func(addr string, handler http.Handler) error {
+		called = true
+		// Optionally call handler directly or just return nil
+		return nil
+	}
+	defer func() { ListenAndServe = http.ListenAndServe }() // reset after test
+
+	database, _ := sql.Open("sqlite3", ":memory:")
+	if err := db.CreateTable(database); err != nil {
+		log.Fatalf("failed to create table: %v", err)
+	}
+	mux := StartAPI(8080, database, false, "", false)
+	testServer := httptest.NewServer(mux)
+
+	resp, err := http.Get(testServer.URL + "/api/current")
+	if err != nil {
+		t.Fatalf("Failed to GET: %v", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("failed to close response body: %v", err)
+		}
+	}()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+	if !called {
+		t.Errorf("expected Serve to be called")
+	}
+
+	resp, err = http.Get(testServer.URL + "/api/ethers")
+	if err != nil {
+		t.Fatalf("Failed to GET: %v", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("failed to close response body: %v", err)
+		}
+	}()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+	if !called {
+		t.Errorf("expected Serve to be called")
+	}
+
+}
