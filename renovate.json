@@ -3,7 +3,9 @@
   "extends": [
     "config:recommended"
   ],
-  "platform": "github",
+  "securityUpdates": {
+    "enabled": true
+  },
   "automerge": true,
   "automergeType": "branch",
   "automergeStrategy": "rebase",
