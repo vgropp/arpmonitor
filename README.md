@@ -10,7 +10,6 @@
 - Writes changes to a persistent SQLite database
 - Provides a simple HTTP API
 - Supports both `ethers` output and structured JSON
-- Filters `0.0.0.0` addresses by default
 - Preferential IPv4 subnet logic for better IP assignment tracking
 
 ---
@@ -41,12 +40,12 @@ sudo ./arpmonitor [flags]
 
 | Flag                 | Description                                                                 | Default                              |
 |----------------------|-----------------------------------------------------------------------------|--------------------------------------|
-| `--iface`            | Network interface to monitor                                                | `eth0`                               |
-| `--db`               | Path to the SQLite database file                                            | `/var/lib/arpmonitor/arpmonitor.db`  |
-| `--resolve-ipv6`     | Enable resolving IPv6 (NDP) addresses                                       | `false`                              |
-| `--filter-zero-ips`  | Filter out `0.0.0.0` addresses                                              | `true`                               |
-| `--prefer-ipv4-net`  | IPv4 network prefix to prefer if multiple IPs are assigned to a MAC         | `192.168.`                           |
-| `--port`             | Port on which the HTTP API server will listen                               | `8567`                               |
+| `-iface`            | Network interface to monitor                                                | `eth0`                               |
+| `-db`               | Path to the SQLite database file                                            | `/var/lib/arpmonitor/arpmonitor.db`  |
+| `-resolve-ipv6`     | Enable resolving IPv6 (NDP) addresses                                       | `false`                              |
+| `-filter-zero-ips`  | Filter out `0.0.0.0` addresses                                              | `true`                               |
+| `-prefer-ipv4-net`  | IPv4 network prefix to prefer if multiple IPs are assigned to a MAC         | `192.168.`                           |
+| `-port`             | Port on which the HTTP API server will listen                               | `8567`                               |
 
 ---
 
