@@ -28,16 +28,16 @@ var ListenAndServe = func(addr string, handler http.Handler) error {
 	return http.ListenAndServe(addr, handler)
 }
 
-func RegisterHandlers(mux *http.ServeMux, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
+func RegisterHandlers(mux *http.ServeMux, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool, resolveKeaLeases bool) {
 	mux.HandleFunc("/api/current", func(w http.ResponseWriter, r *http.Request) {
-		handleJson(r, database, w, resolveIpv6, preferIpv4Net)
+		handleJson(r, database, w, resolveIpv6, preferIpv4Net, resolveKeaLeases)
 	})
 	mux.HandleFunc("/api/ethers", func(w http.ResponseWriter, r *http.Request) {
-		handleEthers(r, database, w, resolveIpv6, preferIpv4Net, filterZeroIps)
+		handleEthers(r, database, w, resolveIpv6, preferIpv4Net, filterZeroIps, resolveKeaLeases)
 	})
 }
 
-func handleEthers(r *http.Request, database *sql.DB, w http.ResponseWriter, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) {
+func handleEthers(r *http.Request, database *sql.DB, w http.ResponseWriter, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool, resolveKeaLeases bool) {
 	daysStr := r.URL.Query().Get("days")
 	days := 7
 	if daysStr != "" {
@@ -60,7 +60,7 @@ func handleEthers(r *http.Request, database *sql.DB, w http.ResponseWriter, reso
 
 	for _, entry := range entries {
 
-		lookupEntry(&entry, resolveIpv6, preferIpv4Net)
+		lookupEntry(&entry, resolveIpv6, preferIpv4Net, resolveKeaLeases)
 
 		ipv4 := firstMatchOrEmpty(entry.IPv4, preferIpv4Net)
 		if filterZeroIps && ipv4 == "0.0.0.0" && len(entry.IPv6) == 0 {
@@ -74,7 +74,7 @@ func handleEthers(r *http.Request, database *sql.DB, w http.ResponseWriter, reso
 	}
 }
 
-func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolveIpv6 bool, preferIpv4Net string) {
+func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolveIpv6 bool, preferIpv4Net string, resolveKeaLeases bool) {
 	daysStr := r.URL.Query().Get("days")
 	days := 7
 	if daysStr != "" {
@@ -90,7 +90,7 @@ func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolv
 	}
 
 	for _, entry := range entries {
-		lookupEntry(&entry, resolveIpv6, preferIpv4Net)
+		lookupEntry(&entry, resolveIpv6, preferIpv4Net, resolveKeaLeases)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -100,9 +100,9 @@ func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolv
 	}
 }
 
-func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool) *http.ServeMux {
+func StartAPI(port int, database *sql.DB, resolveIpv6 bool, preferIpv4Net string, filterZeroIps bool, resolveKeaLeases bool) *http.ServeMux {
 	mux := http.NewServeMux()
-	RegisterHandlers(mux, database, resolveIpv6, preferIpv4Net, filterZeroIps)
+	RegisterHandlers(mux, database, resolveIpv6, preferIpv4Net, filterZeroIps, resolveKeaLeases)
 	addr := fmt.Sprintf(":%d", port)
 	fmt.Printf("API: http://localhost%s/api/current\n", addr)
 	if err := ListenAndServe(addr, mux); err != nil {
@@ -129,7 +129,15 @@ func lookupHostnameFromLeases(mac string, path string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			if err == nil {
+				err = closeErr
+			} else {
+				log.Printf("Failed to close file: %v", closeErr)
+			}
+		}
+	}()
 
 	r := csv.NewReader(f)
 	records, err := r.ReadAll()
@@ -150,7 +158,7 @@ func lookupHostnameFromLeases(mac string, path string) string {
 	return ""
 }
 
-func lookupEntryFunc(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string) {
+func lookupEntryFunc(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string, resolveKeaLeases bool) {
 	names, err := netLookupAddr(firstMatchOrEmpty(entry.IPv4, preferIpv4Net))
 	if err == nil && len(names) > 0 && names[0] != "" {
 		entry.Hostname = names[0]
@@ -165,7 +173,7 @@ func lookupEntryFunc(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string)
 		}
 	}
 
-	if entry.MAC != "" {
+	if resolveKeaLeases && entry.MAC != "" {
 		for _, file := range leasesFiles {
 			leaseName := lookupHostnameFromLeases(entry.MAC, file)
 			if leaseName != "" {
