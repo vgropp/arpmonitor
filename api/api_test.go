@@ -76,7 +76,7 @@ func TestLookupEntry(t *testing.T) {
 		IPv6:     []string{"fe80::1"},
 	}
 
-	lookupEntry(&entry, false, "")
+	lookupEntry(&entry, false, "", false)
 	if entry.Hostname != "host1.local." {
 		t.Errorf("lookupEntry() Hostname = %q, want %q", entry.Hostname, "host1.local.")
 	}
@@ -93,7 +93,7 @@ func TestLookupEntry(t *testing.T) {
 		IPv4:     []string{"1.2.3.4"},
 		IPv6:     []string{"fe80::1"},
 	}
-	lookupEntry(&entry, true, "")
+	lookupEntry(&entry, true, "", false)
 	if entry.Hostname != "host6.local." {
 		t.Errorf("lookupEntry() Hostname = %q, want %q", entry.Hostname, "host6.local.")
 	}
@@ -111,7 +111,7 @@ func TestLookupEntryFunc_IPv4(t *testing.T) {
 		}
 		return nil, nil
 	}
-	lookupEntryFunc(&entry, false, "")
+	lookupEntryFunc(&entry, false, "", false)
 	if entry.Hostname != "host4.local." {
 		t.Errorf("expected host4.local., got %q", entry.Hostname)
 	}
@@ -133,7 +133,7 @@ func TestLookupEntryFunc_IPv6(t *testing.T) {
 		}
 		return nil, nil
 	}
-	lookupEntryFunc(&entry, true, "")
+	lookupEntryFunc(&entry, true, "", false)
 	if entry.Hostname != "host6.local." {
 		t.Errorf("expected host6.local., got %q", entry.Hostname)
 	}
@@ -150,7 +150,7 @@ func (assertErr) Error() string { return "mock error" }
 
 // Patch lookupEntry to use netLookupAddr for testability
 func init() {
-	lookupEntry = func(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string) {
+	lookupEntry = func(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string, resolveKeaLeases bool) {
 		names, err := netLookupAddr(firstMatchOrEmpty(entry.IPv4, preferIpv4Net))
 		if err == nil && len(names) > 0 {
 			entry.Hostname = names[0]
@@ -187,10 +187,10 @@ func setupTestAPI() (func(), string) {
 		return testEntries, nil
 	}
 	origLookupEntry := lookupEntry
-	lookupEntry = func(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string) {}
+	lookupEntry = func(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string, resolveKeaLeases bool) {}
 
 	mux := http.NewServeMux()
-	RegisterHandlers(mux, nil, false, "", false)
+	RegisterHandlers(mux, nil, false, "", false, false)
 	server := httptest.NewServer(mux)
 
 	// Save server for cleanup
@@ -276,7 +276,7 @@ func TestStartAPI(t *testing.T) {
 	if err := db.CreateTable(database); err != nil {
 		log.Fatalf("failed to create table: %v", err)
 	}
-	mux := StartAPI(8080, database, false, "", false)
+	mux := StartAPI(8080, database, false, "", false, false)
 	testServer := httptest.NewServer(mux)
 
 	resp, err := http.Get(testServer.URL + "/api/current")
