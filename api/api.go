@@ -2,11 +2,13 @@ package api
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -16,6 +18,11 @@ import (
 var getRecentEntries = db.GetRecentEntries
 var lookupEntry = lookupEntryFunc
 var netLookupAddr = net.LookupAddr
+
+var leasesFiles = []string{
+	"/var/lib/kea/kea-leases4.csv",
+	"/var/lib/kea/kea-leases4.csv.2",
+}
 
 var ListenAndServe = func(addr string, handler http.Handler) error {
 	return http.ListenAndServe(addr, handler)
@@ -117,14 +124,54 @@ func firstMatchOrEmpty(slice []string, pattern string) string {
 	return ""
 }
 
+func lookupHostnameFromLeases(mac string, path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	r := csv.NewReader(f)
+	records, err := r.ReadAll()
+	if err != nil {
+		return ""
+	}
+
+	mac = strings.ToLower(mac)
+	for _, rec := range records {
+		if len(rec) < 9 {
+			continue
+		}
+		leaseMac := strings.ToLower(strings.TrimSpace(rec[1]))
+		if leaseMac == mac {
+			return strings.TrimSpace(rec[8])
+		}
+	}
+	return ""
+}
+
 func lookupEntryFunc(entry *db.ArpEntry, resolveIpv6 bool, preferIpv4Net string) {
 	names, err := netLookupAddr(firstMatchOrEmpty(entry.IPv4, preferIpv4Net))
-	if err == nil && len(names) > 0 {
+	if err == nil && len(names) > 0 && names[0] != "" {
 		entry.Hostname = names[0]
-	} else if resolveIpv6 {
+		return
+	}
+
+	if resolveIpv6 {
 		names, err = netLookupAddr(firstMatchOrEmpty(entry.IPv6, ""))
-		if err == nil && len(names) > 0 {
+		if err == nil && len(names) > 0 && names[0] != "" {
 			entry.Hostname = names[0]
+			return
+		}
+	}
+
+	if entry.MAC != "" {
+		for _, file := range leasesFiles {
+			leaseName := lookupHostnameFromLeases(entry.MAC, file)
+			if leaseName != "" {
+				entry.Hostname = leaseName
+				return
+			}
 		}
 	}
 }
