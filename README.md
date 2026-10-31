@@ -9,7 +9,7 @@
 - Monitors ARP (IPv4) and optionally NDP (IPv6) entries
 - Stores one row per MAC/IP pair in a SQLite database, so its size depends on the devices in the network, not on the traffic
 - Optionally scans the subnet actively with ARP requests, which also finds devices that stay silent
-- Provides a simple HTTP API
+- Provides a simple HTTP API; resolved hostnames are cached, so queries stay fast
 - Supports both `ethers` output and structured JSON
 - Preferential IPv4 subnet logic for better IP assignment tracking
 
