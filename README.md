@@ -8,6 +8,7 @@
 
 - Monitors ARP (IPv4) and optionally NDP (IPv6) entries
 - Stores one row per MAC/IP pair in a SQLite database, so its size depends on the devices in the network, not on the traffic
+- Optionally scans the subnet actively with ARP requests, which also finds devices that stay silent
 - Provides a simple HTTP API
 - Supports both `ethers` output and structured JSON
 - Preferential IPv4 subnet logic for better IP assignment tracking
@@ -46,7 +47,16 @@ sudo ./arpmonitor [flags]
 | `-filter-zero-ips`  | Filter out `0.0.0.0` addresses                                              | `true`                               |
 | `-prefer-ipv4-net`  | IPv4 network prefix to prefer if multiple IPs are assigned to a MAC         | `192.168.`                           |
 | `-port`             | Port on which the HTTP API server will listen                               | `8567`                               |
+| `-arp-scan-interval` | Send ARP requests for the whole subnet of the interface at this interval, e.g. `5m` (`0` disables) | `0`                                  |
 | `-retention-days`   | Remove MAC/IP pairs not seen for this many days, keeps the newest pair of each MAC (`0` disables) | `30`                                 |
+
+---
+
+## Active ARP scan
+
+By default the monitor only listens, and on a switch port it mostly sees broadcasts. With `-arp-scan-interval`, it also sends one ARP request per address of the interface's first IPv4 subnet, 20 ms apart, skipping its own addresses. Answers are recorded by the sniffer like any other packet, so `last_seen` then reflects whether a device is online right now.
+
+The scan only asks and changes nothing on other devices. It covers subnets of up to 4094 hosts, other subnets are not scanned. A /24 costs about 250 packets of 42 bytes per run. Sending needs the same `CAP_NET_RAW` as capturing.
 
 ---
 
