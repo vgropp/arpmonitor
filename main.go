@@ -24,6 +24,7 @@ func main() {
 	preferIpv4Net := flag.String("prefer-ipv4-net", IPV4_PREFERED, "network prefix for IPv4-Adressen, which will be prefered if multiple addresses are available (default: 192.168.)")
 	port := flag.Int("port", 8567, "HTTP API Port")
 	retentionDays := flag.Int("retention-days", 30, "remove MAC/IP pairs not seen for this many days, the newest pair of each MAC is kept (0 disables the cleanup)")
+	scanInterval := flag.Duration("arp-scan-interval", 0, "send ARP requests for the whole subnet of the interface at this interval, e.g. 5m (0 disables the scan)")
 	flag.Parse()
 
 	database, err := db.InitDB(*dbfile)
@@ -39,6 +40,7 @@ func main() {
 
 	go db.StartCleanup(database, *retentionDays)
 	go arp.StartSniffer(*iface, database)
+	go arp.StartScanner(*iface, *scanInterval)
 	go api.StartAPI(*port, database, *resolveIpv6, *preferIpv4Net, *filterZeroIps, *resolveKeaLeases)
 
 	sig := make(chan os.Signal, 1)
