@@ -16,7 +16,7 @@ import (
 )
 
 var getRecentEntries = db.GetRecentEntries
-var lookupEntry = lookupEntryFunc
+var lookupEntry lookupFunc = newHostnameCache(lookupEntryFunc).lookup
 var netLookupAddr = net.LookupAddr
 
 var leasesFiles = []string{
