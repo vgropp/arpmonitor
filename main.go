@@ -29,7 +29,7 @@ func main() {
 
 	database, err := db.InitDB(*dbfile)
 	if err != nil {
-		log.Fatalf("DB Fehler: %v", err)
+		log.Fatalf("DB error: %v", err)
 	}
 	defer func() {
 		closeErr := database.Close()

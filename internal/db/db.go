@@ -106,7 +106,7 @@ func migrateEvents(db *sql.DB) error {
 }
 
 func InsertARPEvent(db *sql.DB, ip, mac string) {
-	// Bestimmen, ob es sich um IPv4 oder IPv6 handelt
+	// Determine whether this is IPv4 or IPv6
 	var ipType string
 	if net.ParseIP(ip).To4() != nil {
 		ipType = "ipv4"
@@ -120,7 +120,7 @@ func InsertARPEvent(db *sql.DB, ip, mac string) {
         ON CONFLICT (mac, ip) DO UPDATE SET last_seen = excluded.last_seen
     `, mac, ip, ipType, now, now)
 	if err != nil {
-		log.Println("DB Fehler:", err)
+		log.Println("DB error:", err)
 	}
 }
 
