@@ -89,8 +89,8 @@ func handleJson(r *http.Request, database *sql.DB, w http.ResponseWriter, resolv
 		return
 	}
 
-	for _, entry := range entries {
-		lookupEntry(&entry, resolveIpv6, preferIpv4Net, resolveKeaLeases)
+	for i := range entries {
+		lookupEntry(&entries[i], resolveIpv6, preferIpv4Net, resolveKeaLeases)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -312,3 +312,23 @@ func TestStartAPI(t *testing.T) {
 	}
 
 }
+
+func TestCurrentReturnsResolvedHostnames(t *testing.T) {
+	origRecent, origLookup := getRecentEntries, lookupEntry
+	defer func() { getRecentEntries, lookupEntry = origRecent, origLookup }()
+	getRecentEntries = func(*sql.DB, int) ([]db.ArpEntry, error) {
+		return []db.ArpEntry{{MAC: "00:11:22:33:44:55", IPv4: []string{"192.168.1.10"}}}, nil
+	}
+	lookupEntry = func(entry *db.ArpEntry, _ bool, _ string, _ bool) { entry.Hostname = "nas.lan." }
+
+	rec := httptest.NewRecorder()
+	handleJson(httptest.NewRequest("GET", "/api/current", nil), nil, rec, false, "", false)
+
+	var entries []db.ArpEntry
+	if err := json.Unmarshal(rec.Body.Bytes(), &entries); err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Hostname != "nas.lan." {
+		t.Fatalf("hostname missing: %+v", entries)
+	}
+}

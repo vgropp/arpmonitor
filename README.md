@@ -7,7 +7,7 @@
 ## Features
 
 - Monitors ARP (IPv4) and optionally NDP (IPv6) entries
-- Writes changes to a persistent SQLite database
+- Stores one row per MAC/IP pair in a SQLite database, so its size depends on the devices in the network, not on the traffic
 - Provides a simple HTTP API
 - Supports both `ethers` output and structured JSON
 - Preferential IPv4 subnet logic for better IP assignment tracking
@@ -46,6 +46,13 @@ sudo ./arpmonitor [flags]
 | `-filter-zero-ips`  | Filter out `0.0.0.0` addresses                                              | `true`                               |
 | `-prefer-ipv4-net`  | IPv4 network prefix to prefer if multiple IPs are assigned to a MAC         | `192.168.`                           |
 | `-port`             | Port on which the HTTP API server will listen                               | `8567`                               |
+| `-retention-days`   | Remove MAC/IP pairs not seen for this many days, keeps the newest pair of each MAC (`0` disables) | `30`                                 |
+
+---
+
+## Upgrading from the event table
+
+Older versions stored one row per packet in `arp_events`. On the first start, that table is folded into `arp_seen` and the file is compacted. The API is unavailable until this has finished, about a minute for 85 million rows. Back up the file first.
 
 ---
 
@@ -79,6 +86,7 @@ Returns current known MAC → IP mappings as JSON (from the last `N` days):
       "fe80::98b4:bb2a:1122:3344",
       "2001:d2:11c:2200:a1c4:3544:122:3344"
     ],
+    "first_seen": "2025-05-02T08:01:12Z",
     "last_seen": "2025-05-30T14:12:00Z"
   },
   {
@@ -86,6 +94,7 @@ Returns current known MAC → IP mappings as JSON (from the last `N` days):
     "ipv4": [
         "192.168.1.11"
     ],
+    "first_seen": "2025-05-20T19:44:02Z",
     "last_seen": "2025-05-30T14:15:10Z"
   }
 ]
